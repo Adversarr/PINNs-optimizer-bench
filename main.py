@@ -5,7 +5,7 @@ import torch
 import numpy as np
 from muon import Muon
 from torch import optim
-from torch.optim import lr_scheduler as sched
+from torch.optim import LBFGS, lr_scheduler as sched
 from torch.nn import functional as F
 from tqdm import trange
 
@@ -15,7 +15,7 @@ from diffop import vhes, vjac
 from model import PINN
 import pandas
 
-from torch_optimizer import Shampoo
+from distributed_shampoo import DistributedShampoo
 
 RE = 20
 NU = 1 / RE
@@ -75,11 +75,15 @@ def create_optimizer(pinn: PINN, args):
             adamw_wd=0,
         )
     elif name == "shampoo":
-        return Shampoo(
+        return DistributedShampoo(
             params=pinn.parameters(),
             lr=args.init_lr,
+            betas=adam_betas,
+            epsilon=1e-8,
             momentum=args.momentum,
         )
+    elif name == "lbfgs":
+        return LBFGS(params=pinn.parameters(), lr=0.1, line_search_fn="strong_wolfe")
     else:
         raise ValueError(f"Unknown optimizer: {name}")
 
